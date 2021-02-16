@@ -10,13 +10,7 @@
 // Sets default values
 AFPSLaunchPad::AFPSLaunchPad()
 {
-
-	// MyMeshRoot = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MyMeshRoot"));
-
 	OverlapComp = CreateDefaultSubobject<UBoxComponent>(TEXT("OverlapComponent"));
-	OverlapComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	OverlapComp->SetCollisionResponseToAllChannels(ECR_Ignore);
-	OverlapComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	OverlapComp->InitBoxExtent(FVector(100, 100, 50));
 	RootComponent = OverlapComp;
 
@@ -43,14 +37,27 @@ void AFPSLaunchPad::BeginPlay()
 void AFPSLaunchPad::HandleOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	AFPSCharacter* MyPawn = Cast<AFPSCharacter>(OtherActor);
-	if (MyPawn == nullptr) {
-		return;
+
+	const float SpeedForce = 1100.0f;
+
+	if (MyPawn != nullptr) {
+		const FVector ForwardDir = this->GetActorForwardVector();
+		const FVector AddForce = (ForwardDir + FVector(0, 0, 1)) * SpeedForce;
+		MyPawn->LaunchCharacter(AddForce, true, true);
 	}
-	const FVector ForwardDir = this->GetActorForwardVector();
+	else {
+		UE_LOG(LogTemp, Log, TEXT("Overlap!"));
+		UPrimitiveComponent* box = Cast<UPrimitiveComponent>(OtherComp);
+		if ((box != NULL) && (box->IsSimulatingPhysics()))
+		{
+			UE_LOG(LogTemp, Log, TEXT("Box Overlap!"));
+			const FVector ForwardDir = this->GetActorForwardVector();
+			const FVector Impulse = (ForwardDir + FVector(0, 0, 1)) * SpeedForce;
 
-	const FVector AddForce = ForwardDir + FVector(0, 0, 1) * 1000;
-
-	MyPawn->LaunchCharacter(AddForce, false, true);
+			box->AddImpulse(Impulse, "None", true);
+		}
+	}
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
 }
 
 
