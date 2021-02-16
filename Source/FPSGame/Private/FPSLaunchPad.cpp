@@ -25,6 +25,9 @@ AFPSLaunchPad::AFPSLaunchPad()
 	PlatformArrow->SetupAttachment(RootComponent);
 	PlatformArrow->AddRelativeLocation(FVector(0.0f, 0.0f, 15.0f));
 
+	LaunchStrength = 1500.0f;
+	LaunchPitchAngle = 35.0f;
+
 }
 
 // Called when the game starts or when spawned
@@ -38,26 +41,23 @@ void AFPSLaunchPad::HandleOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 {
 	AFPSCharacter* MyPawn = Cast<AFPSCharacter>(OtherActor);
 
-	const float SpeedForce = 1100.0f;
+	FRotator LaunchDirection = GetActorRotation();
+	LaunchDirection.Pitch += LaunchPitchAngle;
+	FVector LaunchVelocity = LaunchDirection.Vector() * LaunchStrength;
 
-	if (MyPawn != nullptr) {
-		const FVector ForwardDir = this->GetActorForwardVector();
-		const FVector AddForce = (ForwardDir + FVector(0, 0, 1)) * SpeedForce;
-		MyPawn->LaunchCharacter(AddForce, true, true);
+	if (MyPawn) {
+		// const FVector ForwardDir = this->GetActorForwardVector();
+		// const FVector LaunchVelocity = (ForwardDir + FVector(0, 0, 1)) * LaunchStrength;
+		MyPawn->LaunchCharacter(LaunchVelocity, true, true);
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
 	}
-	else {
-		UE_LOG(LogTemp, Log, TEXT("Overlap!"));
-		UPrimitiveComponent* box = Cast<UPrimitiveComponent>(OtherComp);
-		if ((box != NULL) && (box->IsSimulatingPhysics()))
-		{
-			UE_LOG(LogTemp, Log, TEXT("Box Overlap!"));
-			const FVector ForwardDir = this->GetActorForwardVector();
-			const FVector Impulse = (ForwardDir + FVector(0, 0, 1)) * SpeedForce;
+	else if ((OtherComp != NULL) && (OtherComp->IsSimulatingPhysics())) {
+		// const FVector ForwardDir = this->GetActorForwardVector();
+		// const FVector Impulse = (ForwardDir + FVector(0, 0, 1)) * LaunchStrength;
 
-			box->AddImpulse(Impulse, "None", true);
-		}
+		OtherComp->AddImpulse(LaunchVelocity, NAME_None, true);
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
 	}
-	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
 }
 
 
